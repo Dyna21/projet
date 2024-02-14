@@ -1,0 +1,284 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+
+st.set_page_config(
+    page_title="Modélisation",
+    page_icon="💻",
+)
+st.markdown("# Modélisation 💻")
+st.sidebar.markdown("# Modélisation 💻")
+
+@st.cache_data
+def load_data(fichier):
+    df_corrected = pd.read_csv(fichier)  # 👈 Download the data
+    return df_corrected
+
+df_corrected = pd.read_csv('comptage velo corrected.csv')
+df_corrected['Date comptage']= pd.to_datetime(df_corrected['Date comptage'])
+df_corrected["Date installation"]= pd.to_datetime(df_corrected["Date installation"])
+
+pages=["Analyse", "Décomposition", "Modélisation"]
+page =st.sidebar.radio("Sommaire",pages)
+
+if page == pages[0] :
+    st.markdown("## :blue[Analyse]")
+    if st.checkbox("Nombre de comptage par jour"):
+        with st.spinner('Wait for it...'):
+            time.sleep(5)
+        daily_sum = df_corrected.groupby(df_corrected['Date comptage'].dt.to_period("d")).agg({'Comptage horaire': 'sum'}).reset_index()
+        fig = plt.figure(figsize=(20, 6))
+        x=daily_sum['Date comptage'].dt.start_time
+        y=daily_sum['Comptage horaire']
+        plt.plot(x, y)
+        plt.title('Nombre de comptage du 01/07/2022 au 30/06/2023',fontsize=20,fontweight='bold')
+        plt.xlabel('Date')
+        plt.ylabel('Nombre de comptage')
+        st.pyplot(fig);
+    if st.checkbox("Nombre de comptage par jour sur avril"):
+        display = st.radio('Que souhaitez-vous montrer ?', ('Sans commentaire', 'Avec commentaire'))
+        if display == 'Sans commentaire':
+            with st.spinner('Wait for it...'):
+                time.sleep(5)
+            df_graph = df_corrected.copy()
+            df_graph = df_graph[(df_graph['Date comptage']>='2023-04-01') & (df_graph['Date comptage']<'2023-05-01')]
+            hebdo_sum = df_graph.groupby(df_graph['Date comptage'].dt.to_period("d")).agg({'Comptage horaire': 'sum'}).reset_index()
+            fig = plt.figure(figsize=(10, 6))
+            x=hebdo_sum['Date comptage'].dt.start_time
+            y=hebdo_sum['Comptage horaire']
+            plt.plot(x, y,linestyle='-', marker='o')
+            plt.title('Nombre de comptage par jour du 01/04/2023 au 30/04/2023',fontsize=14,fontweight='bold')
+            plt.xlabel('Jour')
+            plt.ylabel('Nombre de comptage')
+            plt.xticks(rotation=45)
+            st.pyplot(fig);
+        elif display == 'Avec commentaire':
+            with st.spinner('Wait for it...'):
+                time.sleep(5)
+            df_graph = df_corrected.copy()
+            df_graph = df_graph[(df_graph['Date comptage']>='2023-04-01') & (df_graph['Date comptage']<'2023-05-01')]
+            hebdo_sum = df_graph.groupby(df_graph['Date comptage'].dt.to_period("d")).agg({'Comptage horaire': 'sum'}).reset_index()
+            fig = plt.figure(figsize=(10, 6))
+            x=hebdo_sum['Date comptage'].dt.start_time
+            y=hebdo_sum['Comptage horaire']
+            plt.plot(x, y,linestyle='-', marker='o')
+            plt.title('Nombre de comptage par jour du 01/04/2023 au 30/04/2023',fontsize=14,fontweight='bold')
+            plt.xlabel('Jour')
+            plt.ylabel('Nombre de comptage')
+            plt.xticks(rotation=45)
+            plt.annotate(
+                'Week-end',fontweight='bold',color='green', xy=(110, 140), xytext=(120, 100),xycoords='figure points',
+                        arrowprops=dict(facecolor='green', shrink=0.05))
+            plt.annotate(
+                '',fontweight='bold',color='green', xy=(250, 100), xytext=(180, 105),xycoords='figure points',
+                        arrowprops=dict(facecolor='green', shrink=0.05))
+            plt.annotate(
+                'Grèves',fontweight='bold',color='red', xy=(290, 260), xytext=(280, 110),xycoords='figure points',
+                        arrowprops=dict(facecolor='red', shrink=0.05))
+            plt.annotate(
+                '',fontweight='bold',color='red', xy=(335, 180), xytext=(320, 125),xycoords='figure points',
+                        arrowprops=dict(facecolor='red', shrink=0.05))
+            plt.annotate(
+                '',fontweight='bold',color='red', xy=(480, 90), xytext=(320, 110),xycoords='figure points',
+                        arrowprops=dict(facecolor='red', shrink=0.05))
+            plt.annotate(
+                'Week-end',fontweight='bold',color='green', xy=(340, 190), xytext=(390, 170),xycoords='figure points',
+                        arrowprops=dict(facecolor='green', shrink=0.05))
+            plt.annotate(
+                'Week-end',fontweight='bold',color='green', xy=(480, 100), xytext=(520, 100),xycoords='figure points',
+                        arrowprops=dict(facecolor='green', shrink=0.05))
+            st.pyplot(fig);
+    if st.checkbox("Saisonalité sur avril"):
+        
+        with st.spinner('Wait for it...'):
+            time.sleep(5)
+            
+        from datetime import date, timedelta
+        dates =[]
+        def trouver_les_lundis(mois):
+            # Créer une date de début (1er avril 2023)
+            date_debut = date(2023,mois,1)
+        
+            # Si le 1er jour du mois n'est pas un lundi, trouver le prochain lundi
+            if date_debut.weekday() != 0:
+                date_debut += timedelta(days=(7 - date_debut.weekday()))
+        
+            # Tant que le mois est le même, continuer à ajouter des semaines et stocker les dates dans une liste
+            while date_debut.month == mois:
+                dates.append(date_debut)
+                date_debut += timedelta(weeks=1)
+        
+        # Appeler la fonction pour trouver les lundis
+        trouver_les_lundis(4)
+        
+        txt_semaine=[0,1,2,3]
+        par_semaine=[0,1,2,3]
+        # Une boucle imbriquée pour parcourir les dates et les incrémenter selon l'intervalle de 7 jours
+        for i in range(len(dates)):
+            seasonality =  df_corrected.copy()
+            date_start = dates[i].strftime('%Y-%m-%d')
+            seasonality = seasonality[seasonality['Date comptage'] >= date_start]
+            for j in range(4):
+                dates[i] += timedelta(days=j)
+        
+            date_end = dates[i].strftime('%Y-%m-%d')
+            seasonality = seasonality[seasonality['Date comptage'] <= date_end]
+            seasonality = seasonality[["Comptage horaire", "Date comptage"]]
+            seasonality.set_index("Date comptage", inplace=True)
+            seasonality.squeeze()
+            par_semaine[i] = seasonality.groupby(seasonality.index.dayofweek).mean()
+            txt_semaine[i] = "Semaine du " + date_start + " au " + date_end
+        
+        fig, ax = plt.subplots(figsize=(20,10))
+        ax.plot(par_semaine[0], c='b', label=txt_semaine[0])
+        ax.plot(par_semaine[1], c='r', label=txt_semaine[1])
+        ax.plot(par_semaine[2], c='g', label=txt_semaine[2])
+        ax.plot(par_semaine[3], c='m', label=txt_semaine[3])
+        plt.title('Saisonnalité sur le mois d\'avril',fontsize=20,fontweight='bold')
+        plt.xticks([0,1,2,3,4,5,6], ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'])
+        lines = [ax.get_lines()[0],ax.get_lines()[1],ax.get_lines()[2],ax.get_lines()[3]]
+        plt.legend(lines, [txt_semaine[0], txt_semaine[1] ,txt_semaine[2], txt_semaine[3]], loc="upper right")
+        st.pyplot(fig);
+    if st.checkbox("Comptage sur une semaine, sur une journée, un jour ouvrable et un weekend"):
+        
+        with st.spinner('Wait for it...'):
+            time.sleep(5)
+        
+        df_velo =  df_corrected.copy()
+        df_velo = df_velo[df_velo['Date comptage'] >= '2023-04-01']
+        df_velo = df_velo[df_velo['Date comptage'] < '2023-05-01']
+        df_velo = df_velo[["Comptage horaire", "Date comptage"]]
+        df_velo.set_index("Date comptage", inplace=True)
+        df_velo.squeeze()
+        
+        fig, ax = plt.subplots(1,2,figsize=(18,7))
+        
+        par_semaine = df_velo.groupby(df_velo.index.dayofweek).mean()
+        par_semaine.index = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+        par_semaine.plot(ax=ax[0],title='Semaine', legend=False);
+        
+        par_heure = df_velo.groupby(df_velo.index.time).mean()
+        heures = 4 * 60 * 60 * np.arange(6)
+        par_heure.plot(ax=ax[1],title='Journée', xticks=heures, legend=False)
+        st.pyplot(fig);
+  
+        jours_ouvrables = np.where(df_velo.index.dayofweek < 5, 'Ouvrable', 'Weekend')
+        par_heure = df_velo.groupby([jours_ouvrables, df_velo.index.time]).mean()
+        fig, ax = plt.subplots(1,2,figsize=(18,7))
+        par_heure.loc['Ouvrable'].plot(ax=ax[0], title='Jour ouvrable', xticks=heures, legend=False)
+        par_heure.loc['Weekend'].plot(ax=ax[1], title='Weekend', xticks=heures, legend=False)
+        st.pyplot(fig);
+if page == pages[1]:
+    st.markdown("## :blue[Décomposition]")
+    df_corrected['Date comptage']= pd.to_datetime(df_corrected['Date comptage'])
+    velo_decomp = df_corrected.copy()
+    velo_decomp['Jour'] = velo_decomp['Date comptage'].dt.strftime('%Y-%m-%d')
+    #ajout si besoin de cette ligne
+    #velo_decomp= velo_decomp[(velo_decomp['Jour']>='2023-03-01') & (velo_decomp['Jour']<='2023-03-31')]
+    velo_decomp = velo_decomp.groupby('Jour')['Comptage horaire'].sum().reset_index()
+    velo_decomp = velo_decomp.sort_values(by = 'Jour')
+    velo_decomp['Jour']= pd.to_datetime(velo_decomp['Jour'])
+    velo_decomp.set_index('Jour', inplace=True)
+    
+    option = st.selectbox(
+   "Quel est votre choix ?",
+   ("Décomposition Additif", "Décomposition Multiplicatif"),
+   index=None,
+   placeholder="Selection de la décomposition...",
+)
+
+    st.write(option)
+    
+    if option =="Décomposition Additif":
+        
+        with st.spinner('Wait for it...'):
+            time.sleep(5)
+        
+        #Décomposition additif
+        from statsmodels.tsa.seasonal import seasonal_decompose
+        decomposition = seasonal_decompose(velo_decomp)
+        trend = decomposition.trend
+        seasonal = decomposition.seasonal
+        residual = decomposition.resid
+        
+        fig = plt.figure(figsize=(20, 6))
+        plt.plot(trend)
+        plt.title('Tendance',fontsize=26,fontweight='bold')
+        st.pyplot(fig)
+        
+        fig = plt.figure(figsize=(20, 6))
+        plt.plot(seasonal)
+        plt.title('Saisonnalité',fontsize=26,fontweight='bold')
+        st.pyplot(fig)
+        
+        fig = plt.figure(figsize=(20, 6))
+        plt.plot(residual,"o")
+        plt.title('Résidus',fontsize=18,fontweight='bold')
+        st.pyplot(fig)
+        
+        #pd.plotting.autocorrelation_plot(velo_decomp)
+        
+        from statsmodels.graphics.tsaplots import plot_acf,plot_pacf
+        fig,(ax1,ax2) = plt.subplots(2,1,figsize=(20,6))
+        plot_acf(velo_decomp['Comptage horaire'], lags=30, zero=True, ax=ax1)
+        ax1.set_title('ACF - Série de comptage horaire')
+        ax1.set_xlabel('Lag')
+        ax1.set_ylabel('Corrélation')
+        ax1.grid(True)
+        
+        plot_pacf(velo_decomp['Comptage horaire'], lags=30, zero=True, ax=ax2)
+        ax2.set_title('PACF - Série de comptage horaire')
+        ax2.set_xlabel('Lag')
+        ax2.set_ylabel('Corrélation partielle')
+        ax2.grid(True)
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+        from statsmodels.tsa.stattools import adfuller
+        result=adfuller(velo_decomp)
+        st.write ('Valeur de test : ', result[0])
+        st.write ('P-valeur : ', result[1])
+        st.markdown ("Conclusion : :red[La série n'est pas stationnaire]")
+        
+    if option =="Décomposition Multiplicatif":
+        
+        with st.spinner('Wait for it...'):
+            time.sleep(5)
+        
+        #Décomposition additif
+        from statsmodels.tsa.seasonal import seasonal_decompose
+        decomposition = seasonal_decompose(velo_decomp, model = 'multiplicative')
+        trend = decomposition.trend
+        seasonal = decomposition.seasonal
+        residual = decomposition.resid
+        
+        fig = plt.figure(figsize=(20, 6))
+        plt.plot(trend)
+        plt.title('Tendance',fontsize=26,fontweight='bold')
+        st.pyplot(fig)
+        
+        fig = plt.figure(figsize=(20, 6))
+        plt.plot(seasonal)
+        plt.title('Saisonnalité',fontsize=26,fontweight='bold')
+        st.pyplot(fig)
+        
+        fig = plt.figure(figsize=(20, 6))
+        plt.plot(residual,"o")
+        plt.title('Résidus',fontsize=18,fontweight='bold')
+        st.pyplot(fig)
+        
+        velo_decomp_log = np.log(velo_decomp)
+        plt.plot(velo_decomp_log)
+        plt.xticks(rotation=45)
+        
+if page == pages[2]:
+    st.markdown("## :blue[Modélisation]")
+    
+    st.subheader("Modèle additif et multiplicatif")
+    
+    col1, col2 = st.columns(2)
+    col1.subheader("Modèle additif")
+    col2.subheader("Modèle multiplicatif")
+    col1.write(fig)
